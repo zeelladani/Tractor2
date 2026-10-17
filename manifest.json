@@ -1,0 +1,14 @@
+{
+  "name": "ZM Tractor — Fuel & Job Cost Tracker",
+  "short_name": "ZM Tractor",
+  "description": "Track diesel, engine hours, jobs, clients and maintenance.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#f5f7fb",
+  "background_color": "#f5f7fb",
+  "icons": [
+    { "src": "./ZM_tractor.png", "sizes": "any", "type": "image/png", "purpose": "any" }
+  ]
+}

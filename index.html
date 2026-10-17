@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#f5f7fb" />
+<title>ZM Tractor — Fuel & Job Cost Tracker</title>
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./ZM_tractor.png" />
+<link rel="apple-touch-icon" href="./ZM_tractor.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Hind+Vadodara:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <img class="brand-icon" src="./ZM_tractor.png" alt="" />
+      <span class="brand-word">ZM Tractor</span>
+    </div>
+    <form class="dt-search" id="dtSearchForm" role="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="dtSearch" type="search" placeholder="Search clients, jobs or work…" autocomplete="off" aria-label="Search" />
+    </form>
+    <div class="dt-date" id="dtDate"></div>
+    <div class="topbar-right">
+      <div id="authArea" class="auth-area">
+        <button id="signInBtn" class="btn btn-primary">Sign in</button>
+        <div id="userChip" class="user-chip" hidden>
+          <img id="userAvatar" class="avatar" alt="" />
+          <span id="userName" class="dt-user-name"></span>
+          <button id="signOutBtn" class="btn btn-ghost small" title="Sign out">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div id="liveRegion" class="sr-only" aria-live="polite"></div>
+
+<main class="container">
+  <p class="signin-prompt">Sign in with Google to see and save your records.</p>
+
+  <!-- DASHBOARD -->
+  <section class="page" data-page="dash">
+    <div class="panel hero">
+      <div class="dash-head">
+        <div>
+          <h2 class="hero-title">Dashboard</h2>
+          <p class="dt-sub">Overview of your tractor, fuel, maintenance and field operations.</p>
+        </div>
+        <div class="period">
+          <label class="toggle"><input type="checkbox" id="chkAllTime" /><span>All time</span></label>
+          <select id="dashYear" aria-label="Year">
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+            <option value="2029">2029</option>
+            <option value="2030">2030</option>
+          </select>
+          <select id="dashMonth" aria-label="Month">
+            <option value="all">All Months</option>
+            <option value="01">Jan</option>
+            <option value="02">Feb</option>
+            <option value="03">Mar</option>
+            <option value="04">Apr</option>
+            <option value="05">May</option>
+            <option value="06">Jun</option>
+            <option value="07">Jul</option>
+            <option value="08">Aug</option>
+            <option value="09">Sep</option>
+            <option value="10">Oct</option>
+            <option value="11">Nov</option>
+            <option value="12">Dec</option>
+          </select>
+        </div>
+      </div>
+      <div class="stat-grid cols-2" id="dashHeroStats"></div>
+      <div class="chip-row" id="dashChips"></div>
+    </div>
+
+    <!-- Desktop-only widgets (hidden below 1024px) -->
+    <div class="dt-dash" id="dtDash">
+      <div class="dt-kpis" id="dtKpis"></div>
+
+      <div class="dt-card dt-fuel">
+        <div class="dt-card-head"><h3><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Fuel Consumption</h3><span class="dt-note">Last 6 months · litres</span></div>
+        <div class="dt-chart" id="dtFuelWrap"><canvas id="dtFuelChart"></canvas></div>
+        <p id="dtFuelEmpty" class="empty" hidden>No fuel records in the last 6 months.</p>
+      </div>
+
+      <div class="dt-card dt-exp">
+        <div class="dt-card-head"><h3><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9h9"/><path d="M20.5 15A9 9 0 1 1 9 3.5"/></svg>Expense Breakdown</h3><span class="dt-note" id="dtExpPeriod"></span></div>
+        <div class="dt-exp-body" id="dtExpBody">
+          <div class="dt-donut"><canvas id="dtExpChart"></canvas><div class="dt-donut-c" id="dtExpCenter"></div></div>
+          <div class="dt-legend" id="dtExpLegend"></div>
+        </div>
+        <p id="dtExpEmpty" class="empty" hidden>No expenses in this period.</p>
+      </div>
+
+      <div class="dt-card dt-act">
+        <div class="dt-card-head"><h3><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Recent Activity</h3></div>
+        <div class="dt-act-list" id="dtActivity"></div>
+      </div>
+
+      <div class="dt-card dt-logs">
+        <div class="dt-card-head"><h3><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Recent Fuel Logs</h3><button type="button" class="dt-link" data-goto="fuel">View all</button></div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Litres</th><th>Price/L</th><th>Total cost</th><th>Meter</th></tr></thead>
+            <tbody id="dtFuelRows"></tbody>
+          </table>
+        </div>
+        <p id="dtLogsEmpty" class="empty" hidden>No fuel records yet.</p>
+      </div>
+
+      <div class="dt-card dt-work">
+        <div class="dt-card-head"><h3><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V11M12 11c0-4 3-6 7-6 0 4-3 6-7 6zM12 14c0-3-2-5-6-5 0 3 2 5 6 5z"/></svg>Field Work Summary</h3><span class="dt-note" id="dtWorkPeriod"></span></div>
+        <div id="dtWork"></div>
+      </div>
+
+      <div class="dt-card dt-tractor">
+        <div class="dt-card-head"><h3><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="17" r="3"/><circle cx="18" cy="18" r="2"/><path d="M10 17h6M4 14V6h6l2 4h5v4"/></svg>Tractor Info</h3></div>
+        <div id="dtTractor"></div>
+      </div>
+    </div>
+
+    <div class="panel dt-wide">
+      <div class="panel-head with-action">
+        <h3>Summary</h3>
+        <button id="exportSummaryPdf" class="btn btn-primary small" type="button">Export PDF</button>
+      </div>
+
+      <div class="ms-grid">
+        <div class="ms-field">
+          <div class="ms-label">Client</div>
+          <div class="ms-wrap" data-ms="client">
+            <button type="button" class="ms-btn" id="msClientBtn" aria-haspopup="true" aria-expanded="false">
+              <span class="ms-btn-text" id="msClientLabel">All clients</span>
+              <span class="ms-caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="ms-panel" id="msClientPanel" hidden>
+              <input type="text" class="ms-search" id="msClientSearch" placeholder="Search clients…" />
+              <label class="ms-row ms-all"><input type="checkbox" id="msClientAll" /><span>All clients</span></label>
+              <div class="ms-list" id="msClientList"></div>
+              <div class="ms-foot">
+                <button type="button" class="btn btn-ghost small" id="msClientClear">Clear</button>
+                <button type="button" class="btn btn-primary small" id="msClientDone">Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ms-field">
+          <div class="ms-label">Work type</div>
+          <div class="ms-wrap" data-ms="work">
+            <button type="button" class="ms-btn" id="msWorkBtn" aria-haspopup="true" aria-expanded="false">
+              <span class="ms-btn-text" id="msWorkLabel">All work types</span>
+              <span class="ms-caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="ms-panel" id="msWorkPanel" hidden>
+              <input type="text" class="ms-search" id="msWorkSearch" placeholder="Search work types…" />
+              <label class="ms-row ms-all"><input type="checkbox" id="msWorkAll" /><span>All work types</span></label>
+              <div class="ms-list" id="msWorkList"></div>
+              <div class="ms-foot">
+                <button type="button" class="btn btn-ghost small" id="msWorkClear">Clear</button>
+                <button type="button" class="btn btn-primary small" id="msWorkDone">Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-row-label" style="margin-top:10px">View</div>
+      <div class="chip-row" id="sumViewRow" style="margin-bottom:8px">
+        <button class="chip chip-btn" data-view="client" aria-pressed="true">By client</button>
+        <button class="chip chip-btn" data-view="work" aria-pressed="false">By work type</button>
+        <button class="chip chip-btn" data-view="both" aria-pressed="false">Both</button>
+      </div>
+
+      <div id="summaryClientSection">
+        <div class="summary-section-title">By client</div>
+        <div id="summaryByClient" class="summary-table"></div>
+        <p id="summaryClientEmpty" class="empty" hidden>No jobs match these filters.</p>
+        <div id="summaryClientTotals" class="summary-totals" hidden></div>
+      </div>
+      <div id="summaryWorkSection" hidden>
+        <div class="summary-section-title" style="margin-top:12px">By work type</div>
+        <div id="summaryByWork" class="summary-table"></div>
+        <p id="summaryWorkEmpty" class="empty" hidden>No jobs match these filters.</p>
+        <div id="summaryWorkTotals" class="summary-totals" hidden></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Analytics</h3></div>
+      <div id="insights" class="kpi-grid"></div>
+      <div class="chip-row" id="chartTabs">
+        <button class="chip chip-btn" data-chart="trend" aria-pressed="true">Earned vs spent</button>
+        <button class="chip chip-btn" data-chart="work" aria-pressed="false">Work types</button>
+        <button class="chip chip-btn" data-chart="clients" aria-pressed="false">Clients</button>
+        <button class="chip chip-btn" data-chart="yoy" aria-pressed="false">Year on year</button>
+        <button class="chip chip-btn" data-chart="fuel" aria-pressed="false">Fuel use</button>
+      </div>
+      <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+      <p id="chartNote" class="empty" hidden></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Full-tank consumption intervals</h3></div>
+      <div id="intervals" class="insight-list"></div>
+      <p id="intervalsEmpty" class="empty" hidden>Need two full-tank records to compute consumption.</p>
+    </div>
+
+    <div class="panel dt-wide">
+      <div class="panel-head"><h3>Export</h3></div>
+      <div class="kv-grid" style="margin-bottom:8px">
+        <label class="kv"><span class="kv-lbl">From</span><input type="date" id="expFrom" /></label>
+        <label class="kv"><span class="kv-lbl">To</span><input type="date" id="expTo" /></label>
+      </div>
+      <div class="btn-row">
+        <button id="exportJson" class="btn btn-primary">Export JSON</button>
+        <button id="exportCsv" class="btn btn-primary">Export CSV</button>
+        <button id="exportXlsx" class="btn btn-primary">Export Excel</button>
+        <button id="exportClear" class="btn btn-ghost">Clear range</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- JOBS -->
+  <section class="page" data-page="jobs" hidden>
+    <div class="panel hero">
+      <h2 class="hero-title">Jobs</h2>
+      <p class="hero-sub">Work done, hours, pricing and payment tracking.</p>
+      <div class="stat-grid" id="jobsHeroStats"></div>
+      <div class="chip-row" id="jobFilterRow">
+        <button class="chip chip-btn" data-filter="all" aria-pressed="true">All</button>
+        <button class="chip chip-btn" data-filter="pending" aria-pressed="false">Pending</button>
+        <button class="chip chip-btn" data-filter="done" aria-pressed="false">Paid</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3 id="jobFormTitle">Add job</h3></div>
+      <div id="jobEditBanner" class="edit-banner" hidden>Editing existing job</div>
+      <div class="btn-row" style="margin-bottom:6px">
+        <button id="jobCancelEdit" class="btn btn-ghost small" hidden>Cancel edit</button>
+      </div>
+
+      <form id="jobForm" novalidate>
+        <div class="kv-grid">
+          <h4 class="form-sub">Job details</h4>
+          <label class="kv"><span class="kv-lbl">Date</span><input type="date" id="jDate" required /></label>
+          <label class="kv">
+            <span class="kv-lbl">Client</span>
+            <select id="jClient" required><option value="">— select —</option></select>
+          </label>
+
+          <label class="kv kv-full">
+            <span class="kv-lbl">Work</span>
+            <select id="jWorkType" required>
+              <option value="">— select —</option>
+              <option value="દાતી">દાતી</option>
+              <option value="રાપ">રાપ</option>
+              <option value="રોટીવેટર">રોટીવેટર</option>
+              <option value="વાવણી">વાવણી</option>
+              <option value="સવળા">સવળા</option>
+              <option value="થ્રેસર">થ્રેસર</option>
+              <option value="સાહ પાડવા">સાહ પાડવા</option>
+              <option value="માઢ">માઢ</option>
+            </select>
+          </label>
+
+          <label class="kv kv-full"><span class="kv-lbl">Vigha</span><input type="number" id="jVigha" inputmode="decimal" min="0" step="0.01" required /></label>
+          <h4 class="form-sub">Time and engine meter</h4>
+          <label class="kv"><span class="kv-lbl">Time in</span><input type="time" id="jStartTime" /><button type="button" id="jStartNow" class="btn btn-ghost small">Start now</button></label>
+          <label class="kv"><span class="kv-lbl">Time out</span><input type="time" id="jEndTime" /><button type="button" id="jStopNow" class="btn btn-ghost small">Stop now</button></label>
+          <label class="kv"><span class="kv-lbl">Mtr start</span><input type="number" id="jStart" inputmode="decimal" min="0" step="0.1" required /></label>
+          <label class="kv"><span class="kv-lbl">Mtr end</span><input type="number" id="jEnd" inputmode="decimal" min="0" step="0.1" required /></label>
+          <div class="meter-hint" id="jStartHint" hidden></div>
+          <h4 class="form-sub">Pricing and payment</h4>
+          <label class="kv">
+            <span class="kv-lbl">Pricing</span>
+            <select id="jPriceMode">
+              <option value="hour">Per hour</option>
+              <option value="vigha">Per vigha</option>
+              <option value="fixed">Fixed</option>
+            </select>
+          </label>
+          <label class="kv" id="jRateHourWrap"><span class="kv-lbl">Rate/h</span><input type="number" id="jRateHour" inputmode="decimal" min="0" step="0.01" value="0" required /></label>
+          <label class="kv" id="jRateVighaWrap" hidden><span class="kv-lbl">Rate/vgh</span><input type="number" id="jRateVigha" inputmode="decimal" min="0" step="0.01" value="0" /></label>
+          <label class="kv" id="jFixedWrap" hidden><span class="kv-lbl">Fixed ₹</span><input type="number" id="jFixed" inputmode="decimal" min="0" step="0.01" value="0" /></label>
+          <label class="kv kv-full"><span class="kv-lbl">Received so far ₹</span><input type="number" id="jAmountReceived" inputmode="decimal" min="0" step="0.01" value="0" /><span class="kv-hint">Leave at 0 if unpaid. Record later payments in Hisaab.</span></label>
+          <div id="jPaySeg" class="segmented" hidden><button type="button" class="seg-btn" data-val="pending" aria-pressed="true">Pending</button><button type="button" class="seg-btn" data-val="done" aria-pressed="false">Paid</button></div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="jobSubmit" class="btn btn-primary">Save job</button>
+          <div id="jobMsg" class="form-msg" role="status"></div>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Job history</h3></div>
+      <div id="jobCards" class="client-list"></div>
+      <p id="jobEmpty" class="empty" hidden>No jobs yet.</p>
+    </div>
+  </section>
+
+  <!-- CLIENTS -->
+  <section class="page" data-page="clients" hidden>
+    <div class="panel hero">
+      <h2 class="hero-title">Clients</h2>
+      <p class="hero-sub">Everyone you work for, with their totals at a glance.</p>
+      <div class="stat-grid" id="clientsHeroStats"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3 id="clientFormTitle">Add client</h3></div>
+      <div id="clientEditBanner" class="edit-banner" hidden>Editing existing client</div>
+      <div class="btn-row" style="margin-bottom:6px">
+        <button id="clientCancelEdit" class="btn btn-ghost small" hidden>Cancel edit</button>
+      </div>
+
+      <form id="clientForm" novalidate>
+        <div class="kv-grid">
+          <label class="kv"><span class="kv-lbl">Name</span><input type="text" id="cName" required placeholder="e.g. Mr. Patel" /></label>
+          <label class="kv"><span class="kv-lbl">Phone</span><input type="tel" id="cPhone" inputmode="tel" placeholder="9876543210" /></label>
+          <label class="kv kv-full"><span class="kv-lbl">Village</span><input type="text" id="cVillage" placeholder="e.g. Kampli" /></label>
+          <label class="kv kv-full"><span class="kv-lbl">Notes</span><input type="text" id="cNotes" placeholder="optional" /></label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="clientSubmit" class="btn btn-primary">Save client</button>
+          <div id="clientMsg" class="form-msg" role="status"></div>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>All clients</h3></div>
+      <div class="chip-row" id="clientSortRow" style="margin-bottom:8px">
+        <button class="chip chip-btn" data-sort="az" aria-pressed="true">A → Z</button>
+        <button class="chip chip-btn" data-sort="pending" aria-pressed="false">Most pending</button>
+        <button class="chip chip-btn" data-sort="vigha" aria-pressed="false">Most work (vigha)</button>
+      </div>
+      <div id="clientCards" class="client-grid"></div>
+      <p id="clientEmpty" class="empty" hidden>No clients yet.</p>
+    </div>
+  </section>
+
+  <!-- HISAB -->
+  <section class="page" data-page="hisab" hidden>
+    <div class="panel hero">
+      <h2 class="hero-title">Hisaab (Accounts)</h2>
+      <p class="hero-sub">Ledgers, pending balances, and profit overview.</p>
+      <div class="stat-grid" id="hisabHeroStats"></div>
+    </div>
+
+    <details class="panel fold">
+      <summary>Pending payments by age</summary>
+      <div class="chip-row" id="hisabAgeFilter" style="margin-bottom:8px">
+        <button class="chip chip-btn" data-age="all" aria-pressed="true">All Pending</button>
+        <button class="chip chip-btn" data-age="1" aria-pressed="false">Over 1 Month</button>
+        <button class="chip chip-btn" data-age="2" aria-pressed="false">Over 2 Months</button>
+        <button class="chip chip-btn" data-age="3" aria-pressed="false">Over 3 Months</button>
+        <button class="chip chip-btn" data-age="6" aria-pressed="false">Over 6 Months</button>
+      </div>
+      <div id="hisabAgedList" class="insight-list"></div>
+      <p id="hisabAgedEmpty" class="empty" hidden>No pending payments found.</p>
+    </details>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Client Ledgers (Pending & Done)</h3></div>
+      <div id="hisabLedgers" class="summary-table"></div>
+      <p id="hisabLedgersEmpty" class="empty" hidden>No client records yet.</p>
+    </div>
+  </section>
+
+  <!-- FUEL -->
+  <section class="page" data-page="fuel" hidden>
+    <div class="panel hero">
+      <h2 class="hero-title">Fuel Log</h2>
+      <p class="hero-sub">Record every diesel purchase. Full-tank records unlock consumption math.</p>
+      <div class="stat-grid" id="fuelHeroStats"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3 id="fuelFormTitle">Add fuel record</h3></div>
+      <div id="fuelEditBanner" class="edit-banner" hidden>Editing existing record</div>
+      <div class="btn-row" style="margin-bottom:6px">
+        <button id="fuelCancelEdit" class="btn btn-ghost small" hidden>Cancel edit</button>
+      </div>
+
+      <form id="fuelForm" novalidate>
+        <div class="kv-grid">
+          <label class="kv"><span class="kv-lbl">Date</span><input type="date" id="fDate" required /></label>
+          <label class="kv"><span class="kv-lbl">Litres</span><input type="number" id="fLitres" inputmode="decimal" min="0" step="0.01" required /></label>
+          <label class="kv"><span class="kv-lbl">₹ / L</span><input type="number" id="fPrice" inputmode="decimal" min="0" step="0.01" required /></label>
+          <label class="kv"><span class="kv-lbl">Meter</span><input type="number" id="fHour" inputmode="decimal" min="0" step="0.1" required /></label>
+          <label class="kv kv-full"><span class="kv-lbl">Notes</span><input type="text" id="fNotes" placeholder="optional" /></label>
+          <label class="kv kv-full check">
+            <span class="kv-lbl">Full tank</span>
+            <input type="checkbox" id="fFull" />
+            <span class="kv-hint">Required for consumption calc</span>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="fuelSubmit" class="btn btn-primary">Save fuel record</button>
+          <div id="fuelMsg" class="form-msg" role="status"></div>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Recent fuel records</h3></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Date</th><th>Litres</th><th>Price</th><th>Cost</th><th>Meter</th><th>Full?</th><th></th></tr></thead>
+          <tbody id="fuelRows"></tbody>
+        </table>
+      </div>
+      <p id="fuelEmpty" class="empty" hidden>No fuel records yet.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Maintenance log</h3></div>
+      <div id="maintEditBanner" class="edit-banner" hidden>Editing maintenance entry</div>
+      <div class="btn-row" style="margin-bottom:6px">
+        <button id="maintCancelEdit" class="btn btn-ghost small" hidden>Cancel edit</button>
+      </div>
+
+      <form id="maintForm" novalidate>
+        <div class="kv-grid">
+          <label class="kv"><span class="kv-lbl">Date</span><input type="date" id="mDate" required /></label>
+          <label class="kv"><span class="kv-lbl">Cost ₹</span><input type="number" id="mCost" inputmode="decimal" min="0" step="0.01" value="0" /></label>
+          <label class="kv kv-full"><span class="kv-lbl">Desc</span><input type="text" id="mDesc" placeholder="e.g. Oil change" required /></label>
+          <label class="kv kv-full"><span class="kv-lbl">Parts</span><input type="text" id="mParts" placeholder="e.g. Oil filter, 5L oil" /></label>
+          <label class="kv"><span class="kv-lbl">Meter</span><input type="number" id="mMeter" inputmode="decimal" min="0" step="0.1" /></label>
+          <label class="kv"><span class="kv-lbl">Notes</span><input type="text" id="mNotes" placeholder="optional" /></label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="maintSubmit" class="btn btn-primary">Save maintenance</button>
+          <div id="maintMsg" class="form-msg" role="status"></div>
+        </div>
+      </form>
+
+      <div id="maintList" class="insight-list" style="margin-top:8px"></div>
+      <p id="maintEmpty" class="empty" hidden>No maintenance entries yet.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Tractor profile</h3></div>
+      <form id="tractorForm" novalidate>
+        <div class="kv-grid">
+          <label class="kv"><span class="kv-lbl">Model</span><input type="text" id="tModel" /></label>
+          <label class="kv"><span class="kv-lbl">Reg. no</span><input type="text" id="tReg" /></label>
+          <label class="kv"><span class="kv-lbl">Cap (L)</span><input type="number" id="tCap" inputmode="decimal" step="0.1" min="0" /></label>
+          <label class="kv"><span class="kv-lbl">Start mtr</span><input type="number" id="tStart" inputmode="decimal" step="0.1" min="0" /></label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save profile</button>
+          <div id="tractorMsg" class="form-msg" role="status"></div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<nav class="bottom-nav" role="tablist" aria-label="Sections">
+  <div class="dt-brand"><img src="./ZM_tractor.png" alt="" /><div><b>ZM Tractor</b><small>Fuel &amp; Job Cost Tracker</small></div></div>
+  <button class="nav-btn" data-page="dash" role="tab"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><em>Dashboard</em></button>
+  <button class="nav-btn" data-page="jobs" role="tab"><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h4"/></svg></span><em>Jobs</em></button>
+  <button class="nav-btn" data-page="clients" role="tab"><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg></span><em>Clients</em></button>
+  <button class="nav-btn" data-page="hisab" role="tab"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h11M7 9h11M10 5c4 0 4 6 0 6H7l7 8"/></svg></span><em>Hisaab</em></button>
+  <button class="nav-btn" data-page="fuel" role="tab"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.500 6-11 6-11z"/></svg></span><em>Fuel</em></button>
+  <div class="dt-side-card" id="dtSideCard"></div>
+</nav>
+
+<div id="installBanner" class="install-banner" hidden>
+  <span>Install ZM Tractor for offline access?</span>
+  <div class="btn-row">
+    <button id="installYes" class="btn btn-primary small">Install</button>
+    <button id="installNo" class="btn btn-ghost small">Not now</button>
+  </div>
+</div>
+
+<div id="statModal" class="modal" hidden>
+  <div class="modal-backdrop" id="statModalBackdrop"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="statModalTitle">
+    <div class="modal-head"><h3 id="statModalTitle">—</h3></div>
+    <div id="statModalContent" class="modal-content"></div>
+    <div class="modal-foot">
+      <div id="statModalGoWrap"></div>
+      <button id="statModalClose" class="btn btn-primary">Close</button>
+    </div>
+  </div>
+</div>
+
+<audio id="saveSound" src="./sound.mp3" preload="auto"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
